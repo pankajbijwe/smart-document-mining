@@ -13,7 +13,7 @@ import chromadb
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-ENCRYPTION_KEY = os.getenv("CONTRACT_MINER_ENCRYPTION_KEY") or Fernet.generate_key()
+ENCRYPTION_KEY = os.getenv("DOC_MINER_ENCRYPTION_KEY") or Fernet.generate_key()
 cipher_suite = Fernet(ENCRYPTION_KEY)
 
 def encrypt_data(data: str) -> bytes:
@@ -31,7 +31,7 @@ def mask_sensitive_data(data: str) -> str:
         return data[0] + "*" * (len(data) - 2) + data[-1]
     return data
 
-class SmartContractMiner:
+class SmartDocMiner:
     def __init__(self,
                  ner_model_name: str = "allenai/longformer-base-4096",
                  max_chunk_tokens: int = 4000,  # For Longformer
@@ -40,7 +40,7 @@ class SmartContractMiner:
                  input_filter_pattern: Optional[str] = None,
                  output_filter_fields: Optional[List[str]] = None,
                  sensitive_terms_file: Optional[str] = None):
-        logging.info("Initialized Smart Contract Miner")
+        logging.info("Initialized Smart Document Miner")
 
         config = AutoConfig.from_pretrained(ner_model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(ner_model_name)
@@ -57,10 +57,10 @@ class SmartContractMiner:
         os.makedirs(chroma_persist_dir, exist_ok=True)
 
         self.chroma_client = chromadb.PersistentClient(path=chroma_persist_dir)
-        if "contract_mining_docs" in [c.name for c in self.chroma_client.list_collections()]:
-            self.collection = self.chroma_client.get_collection("contract_mining_docs")
+        if "smart_mining_docs" in [c.name for c in self.chroma_client.list_collections()]:
+            self.collection = self.chroma_client.get_collection("smart_mining_docs")
         else:
-            self.collection = self.chroma_client.create_collection("contract_mining_docs")
+            self.collection = self.chroma_client.create_collection("smart_mining_docs")
 
         # Load sensitive terms for exclusion from the file, if provided
         self.sensitive_terms = self._load_sensitive_terms() if sensitive_terms_file else []
@@ -224,8 +224,8 @@ class SmartContractMiner:
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Smart Contract Miner with PDF vector storage, refinement, and filtering")
-    parser.add_argument("document", help="Path to contract PDF document")
+    parser = argparse.ArgumentParser(description="Smart document Miner with PDF vector storage, refinement, and filtering")
+    parser.add_argument("document", help="Path to PDF document")
     parser.add_argument("fieldsfile", help="File containing list of fields to extract")
     parser.add_argument("outputfile", help="File to write extracted results")
     parser.add_argument("--query", type=str, required=True, help="Query text for context refinement")
@@ -234,7 +234,7 @@ if __name__ == "__main__":
     parser.add_argument("--sensitivetermsfile", type=str, default=None, help="File with sensitive exclusion terms")
     args = parser.parse_args()
 
-    miner = SmartContractMiner(
+    miner = SmartDocMiner(
         input_filter_pattern=args.inputfilter,
         output_filter_fields=args.outputfilterfields,
         sensitive_terms_file=args.sensitivetermsfile
